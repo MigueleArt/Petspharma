@@ -286,9 +286,12 @@ const OrderSummary = ({ order, onShowReports, returnInfo }) => {
         await generatePdf('download');
 
         let message = `*Resumen de Pedido*\n\n`;
-        message += `El PDF del pedido ha sido descargado. Por favor, adjúntalo a este chat.\n\n`;
+        //message += `El PDF del pedido ha sido descargado. Por favor, adjúntalo a este chat.\n\n`;
+        message += `*Fecha:* ${new Date(order.date).toLocaleDateString()}\n`;
+        message += `*Hora:* ${new Date(order.date).toLocaleTimeString()}\n`;
         message += `*Pedido ID:* ${order.id}\n`;
         message += `*Cliente:* ${order.client}\n`;
+        message += `*Distribuidor:* ${order.distributor || 'N/A'}\n`;
         message += `*Total:* $${order.grandTotal}\n`;
         
         const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
