@@ -327,7 +327,7 @@ const OrderSummary = ({ order, onShowReports, returnInfo }) => {
 
     const canvas = await html2canvas(printRef.current, {
         scale: 2,
-        width: 800, 
+        width: 750, 
         windowWidth: 800,
     });
     const imgData = canvas.toDataURL("image/png");
