@@ -51,6 +51,22 @@ const productList = [
   { "code": "PET043", "name": "VITAMINA K 100 ML", "price": 150.00 }
 ];
 
+const distributors = [
+  { id: 1, name: "Distribuidor 1" },
+  { id: 2, name: "Distribuidor 2" },
+  { id: 3, name: "Distribuidor 3" }
+];
+
+/*
+const [order, setOrder] = useState({
+  client: "",
+  distributor: "", // <--- aquí se guarda el distribuidor
+  items: [],
+  date: new Date(),
+  grandTotal: 0,
+  id: Date.now()
+});*/
+
 
 // Component for product rows in the form
 const ProductRow = ({ item, index, onUpdate, onRemove }) => {
@@ -207,7 +223,16 @@ const OrderForm = ({ onSaveOrder }) => {
                     </div>
                     <div className="flex items-center bg-gray-100 p-3 rounded-lg">
                         <Truck className="text-gray-500 mr-3" />
-                        <input type="text" placeholder="Distribuidor" value={distributor} onChange={e => setDistributor(e.target.value)} className="w-full bg-transparent focus:outline-none" />
+                        <select
+                            value={distributor}
+                            onChange={e => setDistributor(e.target.value)}
+                            className="w-full bg-transparent focus:outline-none"
+                            >
+                            <option value="">Selecciona un distribuidor</option>
+                            {distributors.map(dist => (
+                                <option key={dist.id} value={dist.name}>{dist.name}</option>
+                            ))}
+                            </select>
                     </div>
                 </div>
 
@@ -230,6 +255,8 @@ const OrderForm = ({ onSaveOrder }) => {
                     <DollarSign className="mr-2" /> Generar Pedido
                 </button>
             </div>
+
+            
         </>
     );
 };
@@ -368,19 +395,38 @@ const OrderSummary = ({ order, onShowReports, returnInfo }) => {
                     </button>
                 </div>
             </div>
+            
         </>
     );
 };
 
 // View for sales reports
 const ReportsView = ({ orders, onBack, onViewDetails }) => {
-    const totalSales = orders.reduce((sum, order) => sum + parseFloat(order.grandTotal), 0);
-    const totalOrders = orders.length;
+    const [filterDate, setFilterDate] = useState('');
+    const [filterMonth, setFilterMonth] = useState('');
+    const [filterYear, setFilterYear] = useState('');
+
+    // Filtrado de pedidos por fecha, mes y año
+    const filteredOrders = orders.filter(order => {
+        const orderDate = new Date(order.date);
+        const orderDay = orderDate.toISOString().split('T')[0]; // yyyy-mm-dd
+        const orderMonth = orderDate.getMonth() + 1; // 1-12
+        const orderYear = orderDate.getFullYear();
+
+        return (
+            (!filterDate || orderDay === filterDate) &&
+            (!filterMonth || orderMonth === parseInt(filterMonth)) &&
+            (!filterYear || orderYear === parseInt(filterYear))
+        );
+    });
+
+    const totalSales = filteredOrders.reduce((sum, order) => sum + parseFloat(order.grandTotal), 0);
+    const totalOrders = filteredOrders.length;
 
     return (
         <div className="p-4 md:p-6 bg-white rounded-xl shadow-lg">
             <div className="flex justify-between items-center mb-6">
-                 <h2 className="text-2xl font-bold text-gray-800 flex items-center">
+                <h2 className="text-2xl font-bold text-gray-800 flex items-center">
                     <BarChart2 className="mr-3 text-purple-500" /> Reporte de Ventas
                 </h2>
                 <button onClick={onBack} className="flex items-center text-blue-600 hover:text-blue-800">
@@ -388,6 +434,43 @@ const ReportsView = ({ orders, onBack, onViewDetails }) => {
                 </button>
             </div>
 
+            {/* Filtros */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div>
+                    <label className="text-sm text-gray-600 block mb-1">Filtrar por Día:</label>
+                    <input
+                        type="date"
+                        value={filterDate}
+                        onChange={e => setFilterDate(e.target.value)}
+                        className="w-full border rounded-lg p-2"
+                    />
+                </div>
+                <div>
+                    <label className="text-sm text-gray-600 block mb-1">Filtrar por Mes:</label>
+                    <select
+                        value={filterMonth}
+                        onChange={e => setFilterMonth(e.target.value)}
+                        className="w-full border rounded-lg p-2"
+                    >
+                        <option value="">Todos</option>
+                        {[...Array(12)].map((_, i) => (
+                            <option key={i+1} value={i+1}>{new Date(0, i).toLocaleString('es-MX', { month: 'long' })}</option>
+                        ))}
+                    </select>
+                </div>
+                <div>
+                    <label className="text-sm text-gray-600 block mb-1">Filtrar por Año:</label>
+                    <input
+                        type="number"
+                        value={filterYear}
+                        onChange={e => setFilterYear(e.target.value)}
+                        className="w-full border rounded-lg p-2"
+                        placeholder="Ej. 2025"
+                    />
+                </div>
+            </div>
+
+            {/* Tarjetas resumen */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <div className="bg-green-100 p-4 rounded-lg text-center">
                     <h3 className="text-lg font-semibold text-green-800">Ventas Totales</h3>
@@ -399,6 +482,7 @@ const ReportsView = ({ orders, onBack, onViewDetails }) => {
                 </div>
             </div>
 
+            {/* Tabla */}
             <h3 className="text-xl font-semibold text-gray-700 mb-4">Historial de Pedidos</h3>
             <div className="overflow-x-auto">
                 <table className="w-full text-left">
@@ -412,7 +496,7 @@ const ReportsView = ({ orders, onBack, onViewDetails }) => {
                         </tr>
                     </thead>
                     <tbody>
-                        {orders.slice().reverse().map(order => (
+                        {filteredOrders.slice().reverse().map(order => (
                             <tr key={order.id} className="border-b hover:bg-gray-50">
                                 <td className="p-3 text-sm text-gray-600">{new Date(order.date).toLocaleDateString()}</td>
                                 <td className="p-3 font-medium text-gray-800">{order.client}</td>
@@ -425,12 +509,20 @@ const ReportsView = ({ orders, onBack, onViewDetails }) => {
                                 </td>
                             </tr>
                         ))}
+                        {filteredOrders.length === 0 && (
+                            <tr>
+                                <td colSpan="5" className="p-4 text-center text-gray-500">
+                                    No se encontraron pedidos con los filtros seleccionados.
+                                </td>
+                            </tr>
+                        )}
                     </tbody>
                 </table>
             </div>
         </div>
     );
 };
+
 
 // Main App Component
 export default function App() {
