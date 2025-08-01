@@ -34,7 +34,7 @@ export default function GenericManagement({ items, handlers, itemName }) {
   return (
     <div className="p-4 md:p-6 bg-white rounded-xl shadow-lg">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-800">Gestión de {itemName}s</h2>
+        <h2 className="text-2xl font-bold text-gray-800">Gestión de {itemName}</h2>
         <button onClick={() => openModal()} className="flex items-center bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700">
           <Plus size={20} className="mr-2" /> Agregar {itemName}
         </button>

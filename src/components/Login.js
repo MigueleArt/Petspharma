@@ -15,10 +15,12 @@ export default function Login({ onLogin }) {
       <div className="w-full max-w-sm p-8 space-y-8 bg-white rounded-xl shadow-lg">
         <div className="text-center">
           <img
-            src="[https://petspharma.com.mx/wp-content/uploads/2024/06/LogoPets-1-1.png](https://petspharma.com.mx/wp-content/uploads/2024/06/LogoPets-1-1.png)"
+            src="/LogoPets-1-1.png"
             alt="Logo"
             className="w-40 mx-auto mb-4"
-            onError={(e) => { e.currentTarget.src = "[https://placehold.co/200x80?text=Logo](https://placehold.co/200x80?text=Logo)"; }}
+            onError={(e) => {
+            e.currentTarget.src = "https://placehold.co/200x80?text=Logo";
+            }}
           />
           <h1 className="text-2xl font-bold text-gray-800">Iniciar Sesión</h1>
           <p className="text-gray-500">Accede al sistema de pedidos</p>
