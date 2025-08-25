@@ -169,6 +169,9 @@ export default function App() {
     }
   };
 
+
+  console.log("Estado actual de productos en App:", products);
+  
   return (
     <>
       <style>{`

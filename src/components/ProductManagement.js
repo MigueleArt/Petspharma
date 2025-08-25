@@ -7,7 +7,7 @@ export default function ProductManagement({ items, handlers }) {
   const [currentItem, setCurrentItem] = useState(null);
 
   const openModal = (item = null) => {
-    setCurrentItem(item || { name: '', price: '', code: '' });
+    setCurrentItem(item || { id: '', name: '', price: '' });
     setIsModalOpen(true);
   };
 
@@ -23,7 +23,7 @@ export default function ProductManagement({ items, handlers }) {
       price: parseFloat(currentItem.price) || 0,
     };
 
-    if (itemToSave.id) {
+    if (items.find(p => p.id === itemToSave.id)) {
       handlers.handleUpdateItem(itemToSave);
     } else {
       handlers.handleAddItem(itemToSave);
@@ -48,7 +48,7 @@ export default function ProductManagement({ items, handlers }) {
         <table className="w-full text-left">
           <thead className="bg-gray-100">
             <tr>
-              <th className="p-3">Código</th>
+              <th className="p-3">SKU</th>
               <th className="p-3">Nombre</th>
               <th className="p-3">Precio</th>
               <th className="p-3 text-center">Acciones</th>
@@ -56,8 +56,8 @@ export default function ProductManagement({ items, handlers }) {
           </thead>
           <tbody>
             {items.map(item => (
-              <tr key={item.id || item.code} className="border-b hover:bg-gray-50">
-                <td className="p-3 text-gray-600">{item.code}</td>
+              <tr key={item.id} className="border-b hover:bg-gray-50">
+                <td className="p-3 text-gray-600">{item.id}</td>
                 <td className="p-3 font-medium text-gray-800">{item.name}</td>
                 <td className="p-3 text-gray-600">${parseFloat(item.price).toFixed(2)}</td>
                 <td className="p-3 text-center space-x-2">
@@ -71,12 +71,12 @@ export default function ProductManagement({ items, handlers }) {
       </div>
 
       {isModalOpen && (
-        <Modal onClose={closeModal} title={currentItem.id ? 'Editar Producto' : 'Agregar Producto'}>
+        <Modal onClose={closeModal} title={items.find(p => p.id === currentItem.id) ? 'Editar Producto' : 'Agregar Producto'}>
           <form onSubmit={handleSave}>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Código</label>
-                <input type="text" name="code" value={currentItem.code} onChange={handleChange} className="w-full p-2 mt-1 bg-gray-100 border rounded-lg" required />
+                <label className="block text-sm font-medium text-gray-700">SKU</label>
+                <input type="text" name="id" value={currentItem.id} onChange={handleChange} className="w-full p-2 mt-1 bg-gray-100 border rounded-lg" required />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Nombre del Producto</label>

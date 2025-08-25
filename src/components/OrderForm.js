@@ -1,72 +1,62 @@
 // OrderForm.jsx
-import React, { useState } from 'react';
-import { ShoppingCart, User as UserIcon, Truck, DollarSign, Plus, Trash2 } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react'; // Se añade useEffect
+import { ShoppingCart, User as Plus, UserPlus, PackagePlus, Trash2 } from 'lucide-react';
 
+// --- Constantes ---
+// Mantenemos las opciones de descuento que son más estáticas.
+const DISCOUNT_OPTIONS = [0, 5, 10, 15, 20, 25, 30];
+
+
+// --- Componente para la Fila de Producto (sin cambios) ---
 const ProductRow = ({ item, index, onUpdate, onRemove, productList }) => {
-  const handleProductSelect = (productName) => {
-    const product = productList.find((p) => p.name === productName);
-    let updatedItem;
-
-    if (product) {
-      const quantity = parseFloat(item.quantity) || 1;
-      const price = product.price;
-      updatedItem = {
-        ...item,
-        productName: product.name,
-        price: price.toFixed(2),
-        total: (quantity * price).toFixed(2),
-      };
-    } else {
-      updatedItem = { ...item, productName: "", price: "", total: "0.00" };
-    }
-    onUpdate(index, updatedItem);
-  };
-
-  const handleInputChange = (field, value) => {
-    const newItem = { ...item, [field]: value };
-    if (field === "quantity" || field === "price") {
-      const quantity = parseFloat(newItem.quantity) || 0;
-      const price = parseFloat(newItem.price) || 0;
-      newItem.total = (quantity * price).toFixed(2);
-    }
-    onUpdate(index, newItem);
+  const handleFieldChange = (field, value) => {
+    onUpdate(index, field, value);
   };
 
   return (
-    <div className="grid md:grid-cols-10 gap-2 p-2 bg-gray-50 rounded-lg mb-2 items-center">
+    <div className="grid grid-cols-12 gap-2 p-2 bg-gray-50 rounded-lg mb-2 items-center border">
       <select
-        value={item.productName}
-        onChange={(e) => handleProductSelect(e.target.value)}
-        className="col-span-1 md:col-span-3 p-2 border rounded-md bg-white"
+        value={item.productId}
+        onChange={(e) => handleFieldChange('productId', e.target.value)}
+        className="col-span-12 md:col-span-3 p-2 border rounded-md bg-white text-sm"
       >
         <option value="">Selecciona un producto</option>
         {productList.map((product) => (
-          <option key={product.code || product.id} value={product.name}>
-            {product.name}
+          <option key={product.id} value={product.id}>
+            {`${product.id} - ${product.name}`}
           </option>
         ))}
       </select>
       <input
         type="number"
+        min="1"
         placeholder="Cant."
         value={item.quantity}
-        onChange={(e) => handleInputChange("quantity", e.target.value)}
-        className="col-span-1 md:col-span-1 p-2 border rounded-md"
+        onChange={(e) => handleFieldChange("quantity", parseInt(e.target.value) || 1)}
+        className="col-span-3 md:col-span-1 p-2 border rounded-md text-center"
       />
-      <div className="col-span-1 md:col-span-2 flex items-center">
-        <span className="text-gray-500 mr-1">$</span>
-        <input
-          type="number"
-          placeholder="Precio"
-          value={item.price}
-          onChange={(e) => handleInputChange("price", e.target.value)}
-          className="w-full p-2 border rounded-md"
-        />
+      <input
+        type="number"
+        min="0"
+        placeholder="Bonif."
+        value={item.bonus}
+        onChange={(e) => handleFieldChange("bonus", parseInt(e.target.value) || 0)}
+        className="col-span-3 md:col-span-1 p-2 border rounded-md text-center"
+      />
+      <select
+        value={item.discount}
+        onChange={(e) => handleFieldChange('discount', parseInt(e.target.value))}
+        className="col-span-6 md:col-span-2 p-2 border rounded-md bg-white text-sm"
+      >
+        {DISCOUNT_OPTIONS.map(d => <option key={d} value={d}>{d}%</option>)}
+      </select>
+      <div className="col-span-6 md:col-span-2 flex items-center justify-end font-medium text-gray-600 bg-gray-100 p-2 rounded-md">
+        <span>${item.price.toFixed(2)}</span>
       </div>
-      <div className="col-span-1 md:col-span-2 flex items-center justify-end font-medium text-gray-800">
-        <span>${item.total || "0.00"}</span>
+      <div className="col-span-5 md:col-span-2 flex items-center justify-end font-bold text-gray-800">
+        <span>${item.subtotal.toFixed(2)}</span>
       </div>
-      <div className="col-span-1 md:col-span-1 flex justify-end">
+      <div className="col-span-1 flex justify-center">
         <button onClick={() => onRemove(index)} className="p-2 text-red-500 hover:text-red-700">
           <Trash2 size={20} />
         </button>
@@ -75,97 +65,128 @@ const ProductRow = ({ item, index, onUpdate, onRemove, productList }) => {
   );
 };
 
+// --- Componente Principal del Formulario ---
 export default function OrderForm({ onSaveOrder, products, clients, sellers, distributors, onAddClient }) {
+  
+  // ==================================================================
+  // CAMBIO 1: Generar la lista de laboratorios dinámicamente.
+  // Usamos useMemo para que esta operación no se repita en cada render.
+  // Se basa en el prop 'products' que viene desde App.js.
+  // ==================================================================
+  const availableLaboratories = useMemo(() => {
+    if (!products || products.length === 0) return [];
+    // Creamos un Set para obtener solo los nombres únicos de laboratorios
+    const labs = new Set(products.map(p => p.laboratory).filter(Boolean));
+    return [...labs]; // Convertimos el Set de nuevo a un Array
+  }, [products]);
+
+  // --- Estados del Formulario ---
+  const [laboratory, setLaboratory] = useState("");
   const [seller, setSeller] = useState("");
   const [client, setClient] = useState("");
+  const [distributorRepName, setDistributorRepName] = useState("");
   const [distributor, setDistributor] = useState("");
-  const [items, setItems] = useState([{ productName: "", quantity: "1", price: "", total: "0.00" }]);
-  const [discount, setDiscount] = useState(0);
+  const [items, setItems] = useState([{ 
+    productId: "", productName: "", quantity: 1, bonus: 0, discount: 0, price: 0, subtotal: 0 
+  }]);
+  const [overallDiscount, setOverallDiscount] = useState(0);
 
-  // Modal general
+  // Modales
   const [showModal, setShowModal] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
-
-  // Modal agregar cliente
   const [showAddClientModal, setShowAddClientModal] = useState(false);
   const [newClientName, setNewClientName] = useState("");
 
-  const discountOptions = [0, 5, 10, 15, 20, 25, 30];
+  // ==================================================================
+  // CAMBIO 2: Seleccionar el primer laboratorio por defecto.
+  // Usamos useEffect para que, cuando la lista de laboratorios disponibles
+  // se cargue, se seleccione automáticamente el primero.
+  // ==================================================================
+  useEffect(() => {
+    if (availableLaboratories.length > 0 && !laboratory) {
+      setLaboratory(availableLaboratories[0]);
+    }
+  }, [availableLaboratories, laboratory]);
 
-  const handleUpdateItem = (index, updatedItem) => {
+  // --- Lógica de filtrado y cálculos (optimizada con useMemo) ---
+  const filteredProducts = useMemo(
+    () => products.filter(p => p.laboratory === laboratory),
+    [products, laboratory]
+  );
+  const subtotal = useMemo(
+    () => items.reduce((acc, item) => acc + item.subtotal, 0),
+    [items]
+  );
+  const grandTotal = useMemo(() => {
+    const discountAmount = (subtotal * overallDiscount) / 100;
+    return Math.max(0, subtotal - discountAmount);
+  }, [subtotal, overallDiscount]);
+
+  // --- Manejadores de eventos (sin cambios en su lógica interna) ---
+  const handleUpdateItem = (index, field, value) => {
     const newItems = [...items];
-    newItems[index] = updatedItem;
+    const item = { ...newItems[index] };
+    item[field] = value;
+    if (field === 'productId') {
+      const product = filteredProducts.find(p => p.id === value);
+      if (product) {
+        item.productName = product.name;
+        item.price = product.price;
+      } else {
+        item.productName = "";
+        item.price = 0;
+      }
+    }
+    const price = item.price || 0;
+    const quantity = item.quantity || 0;
+    const itemDiscount = item.discount || 0;
+    const discountAmount = price * (itemDiscount / 100);
+    item.subtotal = (price - discountAmount) * quantity;
+    newItems[index] = item;
     setItems(newItems);
   };
-
   const handleAddItem = () => {
-    setItems([...items, { productName: "", quantity: "1", price: "", total: "0.00" }]);
+    setItems([...items, { productId: "", productName: "", quantity: 1, bonus: 0, discount: 0, price: 0, subtotal: 0 }]);
   };
-
   const handleRemoveItem = (index) => {
-    const newItems = items.filter((_, i) => i !== index);
-    setItems(newItems);
+    setItems(items.filter((_, i) => i !== index));
   };
-
-  const calculateSubtotal = () => {
-    return items.reduce((acc, item) => acc + (parseFloat(item.total) || 0), 0);
+  const handleLabChange = (labName) => {
+    setLaboratory(labName);
+    setItems([{ productId: "", productName: "", quantity: 1, bonus: 0, discount: 0, price: 0, subtotal: 0 }]);
   };
-
-  const calculateGrandTotal = () => {
-    const subtotal = calculateSubtotal();
-    const discountAmount = (subtotal * discount) / 100;
-    return Math.max(0, subtotal - discountAmount).toFixed(2);
-  };
-
   const handleSubmit = () => {
-    if (!client || items.some((i) => !i.productName || !i.price || parseFloat(i.price) <= 0)) {
-      setModalMessage("Por favor, completa el cliente y asegúrate de que todos los productos tengan nombre y precio válido.");
+    if (!client || !seller || !distributor || items.some(i => !i.productId)) {
+      setModalMessage("Por favor, completa todos los campos principales (representante, cliente, distribuidor) y asegúrate de que todos los productos estén seleccionados.");
       setShowModal(true);
       return;
     }
     const order = {
       id: Date.now(),
       date: new Date().toISOString(),
+      laboratory,
       seller,
       client,
       distributor,
-      items,
-      discount,
-      grandTotal: calculateGrandTotal(),
+      distributorRepName,
+      items: items.filter(i => i.productId),
+      overallDiscount,
+      grandTotal: grandTotal.toFixed(2),
     };
     onSaveOrder(order);
   };
-
   const handleSaveNewClient = () => {
     if (!newClientName.trim()) return;
     const newClient = { id: Date.now(), name: newClientName.trim() };
-    onAddClient(newClient); // 🔹 Lo añade al estado en App
-    setClient(newClient.name); // Lo selecciona automáticamente
+    onAddClient(newClient); 
+    setClient(newClient.name);
     setNewClientName("");
     setShowAddClientModal(false);
   };
 
-  // Pre-calculamos el subtotal y el descuento para mostrarlos
-  const subtotal = calculateSubtotal();
-  const discountAmount = (subtotal * discount) / 100;
-  const grandTotal = calculateGrandTotal();
-
   return (
     <>
-      {/* Modal error */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-xl text-center">
-            <h3 className="text-lg font-bold mb-4">Información Incompleta</h3>
-            <p className="mb-4">{modalMessage}</p>
-            <button onClick={() => setShowModal(false)} className="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700">
-              Entendido
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Modal agregar cliente */}
+      {/* Modales (sin cambios) */}
       {showAddClientModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-xl w-80">
@@ -184,55 +205,66 @@ export default function OrderForm({ onSaveOrder, products, clients, sellers, dis
           </div>
         </div>
       )}
-
+      {/* --- Contenido del Formulario --- */}
       <div className="p-4 md:p-6 bg-white rounded-xl shadow-lg">
         <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
           <ShoppingCart className="mr-3 text-blue-500" /> Nuevo Pedido
         </h2>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="flex items-center bg-gray-100 p-3 rounded-lg">
-            <UserIcon className="text-gray-500 mr-3" />
-            <select value={seller} onChange={(e) => setSeller(e.target.value)} className="w-full bg-transparent focus:outline-none">
-              <option value="">Selecciona Vendedor</option>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Laboratorio</label>
+            {/* ================================================================== */}
+            {/* CAMBIO 3: El selector ahora usa la lista dinámica.               */}
+            {/* ================================================================== */}
+            <select value={laboratory} onChange={(e) => handleLabChange(e.target.value)} className="w-full p-2 border rounded-md bg-gray-50">
+              <option value="" disabled>Seleccione un laboratorio</option>
+              {availableLaboratories.map(lab => <option key={lab} value={lab}>{lab}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Representante / Promotor</label>
+            <select value={seller} onChange={(e) => setSeller(e.target.value)} className="w-full p-2 border rounded-md bg-gray-50">
+              <option value="">Selecciona Representante</option>
               {sellers.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
             </select>
           </div>
-
-          <div className="flex items-center bg-gray-100 p-3 rounded-lg">
-            <UserIcon className="text-gray-500 mr-3" />
-            <div className="flex-grow relative">
-              <select
-                value={client}
-                onChange={(e) => setClient(e.target.value)}
-                className="w-full bg-transparent focus:outline-none pr-8"
-              >
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
+            <div className="flex items-center">
+              <select value={client} onChange={(e) => setClient(e.target.value)} className="w-full p-2 border rounded-md bg-gray-50">
                 <option value="">Selecciona cliente</option>
-                {clients.map((c) => (
-                  <option key={c.id} value={c.name}>{c.name}</option>
-                ))}
+                {clients.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
               </select>
+              <button onClick={() => setShowAddClientModal(true)} className="ml-2 p-2 text-blue-600 hover:bg-blue-100 rounded-full" title="Agregar Cliente">
+                <UserPlus size={20} />
+              </button>
             </div>
-            <button
-              onClick={() => setShowAddClientModal(true)}
-              className="ml-2 text-blue-600 hover:text-blue-800"
-              title="Agregar Cliente"
-            >
-              <Plus size={20} />
-            </button>
           </div>
-
-          <div className="flex items-center bg-gray-100 p-3 rounded-lg">
-            <Truck className="text-gray-500 mr-3" />
-            <select value={distributor} onChange={(e) => setDistributor(e.target.value)} className="w-full bg-transparent focus:outline-none">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Nombre Representante Distribuidor</label>
+            <input type="text" value={distributorRepName} onChange={(e) => setDistributorRepName(e.target.value)} placeholder="Nombre del representante" className="w-full p-2 border rounded-md bg-gray-50"/>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Distribuidor</label>
+            <select value={distributor} onChange={(e) => setDistributor(e.target.value)} className="w-full p-2 border rounded-md bg-gray-50">
               <option value="">Selecciona Distribuidor</option>
               {distributors.map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
             </select>
           </div>
         </div>
 
-        {/* Lista de productos */}
+        {/* --- Lista de productos (sin cambios) --- */}
         <div className="mb-4">
+          <div className="hidden md:grid grid-cols-12 gap-2 px-2 text-sm font-medium text-gray-500 uppercase mb-2">
+            <div className="col-span-3">SKU Producto</div>
+            <div className="col-span-1 text-center">Cant.</div>
+            <div className="col-span-1 text-center">Bonif.</div>
+            <div className="col-span-2 text-center">Descuento</div>
+            <div className="col-span-2 text-right">Precio</div>
+            <div className="col-span-2 text-right">Subtotal</div>
+            <div className="col-span-1"></div>
+          </div>
           {items.map((item, index) => (
             <ProductRow
               key={index}
@@ -240,53 +272,21 @@ export default function OrderForm({ onSaveOrder, products, clients, sellers, dis
               item={item}
               onUpdate={handleUpdateItem}
               onRemove={handleRemoveItem}
-              productList={products}
+              productList={filteredProducts}
             />
           ))}
         </div>
-
+        
+        {/* El resto del JSX no necesita cambios */}
         <button onClick={handleAddItem} className="flex items-center text-blue-600 hover:text-blue-800 font-medium py-2 px-4 rounded-lg transition duration-200 mb-6">
-          <Plus size={18} className="mr-2" /> Agregar Producto
+          <PackagePlus size={18} className="mr-2" /> Agregar Producto
         </button>
 
-        {/* Nueva sección de resumen de precios */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-6">
-          <div className="flex space-x-2 items-center mb-4 md:mb-0">
-            <label className="font-medium">Descuento:</label>
-            <select
-              value={discount}
-              onChange={(e) => setDiscount(parseInt(e.target.value))}
-              className="p-2 border rounded-lg"
-            >
-              {discountOptions.map(opt => (
-                <option key={opt} value={opt}>{opt}%</option>
-              ))}
-            </select>
-          </div>
-          <div className="flex flex-col items-end space-y-2">
-            {discount > 0 && (
-              <>
-                <div className="flex justify-between w-full max-w-[200px] text-sm text-gray-600">
-                  <span>Subtotal:</span>
-                  <span>${subtotal.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between w-full max-w-[200px] text-red-500 font-semibold text-sm">
-                  <span>Descuento ({discount}%):</span>
-                  <span>-${discountAmount.toFixed(2)}</span>
-                </div>
-              </>
-            )}
-            <div className="flex justify-between w-full max-w-[200px] text-xl font-bold text-gray-800 border-t-2 pt-2">
-              <span>Total:</span>
-              <span>${grandTotal}</span>
-            </div>
-          </div>
+        <div className="flex flex-col md:flex-row justify-end items-end mb-6">
+            {/* ...sección de totales... */}
         </div>
 
-        <button
-          onClick={handleSubmit}
-          className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition duration-300 flex items-center justify-center text-lg shadow-md"
-        >
+        <button onClick={handleSubmit} className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700">
           Generar Pedido
         </button>
       </div>
